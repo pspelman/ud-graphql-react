@@ -1,7 +1,12 @@
 const graphql = require("graphql");
 const axios = require("axios");
-const { GraphQLID } = require("graphql");
-const { GraphQLString, GraphQLInt, GraphQLSchema, GraphQLObjectType } = graphql;
+const {
+  GraphQLList,
+  GraphQLString,
+  GraphQLInt,
+  GraphQLSchema,
+  GraphQLObjectType,
+} = graphql;
 // const _ = require("lodash");
 
 const users = [
@@ -11,16 +16,24 @@ const users = [
 
 const CompanyType = new GraphQLObjectType({
   name: "Company",
-  fields: {
+  fields: () => ({
     id: { type: GraphQLInt },
     name: { type: GraphQLString },
     description: { type: GraphQLString },
-  },
+    users: {
+      type: new GraphQLList(UserType),
+      resolve(parentValue, args) {
+        return axios
+          .get(`http://localhost:3000/companies/${parentValue.id}/users`)
+          .then((resp) => resp.data);
+      },
+    },
+  }),
 });
 
 const UserType = new GraphQLObjectType({
   name: "User",
-  fields: {
+  fields: () => ({
     id: { type: GraphQLInt },
     firstName: { type: GraphQLString },
     age: { type: GraphQLInt },
@@ -33,7 +46,7 @@ const UserType = new GraphQLObjectType({
           .then((resp) => resp.data);
       },
     },
-  },
+  }),
 });
 
 // add the root query to tell GQL where to jump into the data
@@ -47,6 +60,15 @@ const RootQuery = new GraphQLObjectType({
         // return _.find(users, { id: args.id });
         return axios
           .get(`http://localhost:3000/users/${args.id}`)
+          .then((resp) => resp.data);
+      },
+    },
+    company: {
+      type: CompanyType,
+      args: { id: { type: GraphQLInt } },
+      resolve(parentValue, args) {
+        return axios
+          .get(`http://localhost:3000/companies/${args.id}`)
           .then((resp) => resp.data);
       },
     },
